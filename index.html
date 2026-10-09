@@ -1,0 +1,2059 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-900 text-slate-100">
+<!-- INÍCIO: configurações, dependências e estilos da página -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppHub Studio - Vendas de Apps & Gestão de Pagamentos</title>
+    
+    <!-- Meta tags PWA & SEO -->
+    <meta name="description" content="Plataforma completa de demonstração, venda e licenciamento de aplicativos web e mobile com gestão de pagamentos e painel administrativo.">
+    <meta name="theme-color" content="#090d16">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <script>
+        (() => {
+            const appId = new URLSearchParams(window.location.search).get('installApp') ||
+                new URLSearchParams(window.location.search).get('app');
+            const manifest = document.createElement('link');
+            manifest.id = 'appManifestLink';
+            manifest.rel = 'manifest';
+            manifest.href = appId ? `manifest.php?app=${encodeURIComponent(appId)}` : 'manifest.php';
+            document.head.appendChild(manifest);
+        })();
+    </script>
+    <link rel="apple-touch-icon" id="appleTouchIcon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN for Analytics -->
+    <script src="https://cdn.jsdelivr.com/npm/chart.js"></script>
+    <!-- Inter Font CDN -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/app.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f5ff',
+                            100: '#e0ebff',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+</head>
+<!-- FIM: configurações, dependências e estilos da página -->
+<body class="h-full font-sans antialiased bg-app-gradient text-slate-100 flex flex-col min-h-screen selection:bg-brand-500 selection:text-white">
+
+    <!-- INÍCIO: cabeçalho e navegação -->
+    <header class="bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 sticky top-0 z-40 transition-all">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Logo & Brand -->
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('marketplace')">
+                <img src="img/logo.jpg" alt="AppHub Studio" class="h-10 w-40 sm:h-12 sm:w-48 object-contain">
+                <div>
+                    <span class="hidden sm:inline-block text-[10px] uppercase font-bold tracking-wider bg-brand-500/10 text-brand-300 px-2.5 py-0.5 rounded-full ml-2 border border-brand-500/20">
+                        ⚡ Web Apps PRO
+                    </span>
+                </div>
+            </div>
+
+            <!-- View Mode Switcher & Quick Actions -->
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <!-- Public Visitor Button: Discreet Admin Login Trigger -->
+                <button id="btnAdminLoginTrigger" onclick="requireAdminAuth()" class="text-slate-400 hover:text-white bg-slate-900/90 hover:bg-slate-800 border border-slate-800/80 px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-2 transition hover:border-slate-700 shadow-sm">
+                    <i class="fa-solid fa-shield-halved text-brand-400"></i>
+                    <span class="text-[11px] font-medium">Área Restrita</span>
+                </button>
+
+                <!-- Admin Controls Group (HIDDEN by default until authenticated) -->
+                <div id="adminControlsGroup" class="hidden items-center space-x-2 sm:space-x-3">
+                    <!-- Mode Selector Pills -->
+                    <div class="bg-slate-900/90 p-1 rounded-xl border border-slate-800/80 flex items-center shadow-inner">
+                        <button id="btnViewMarketplace" onclick="switchView('marketplace')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 bg-gradient-to-r from-brand-600 to-indigo-600 text-white shadow-md shadow-brand-500/20">
+                            <i class="fa-solid fa-store"></i>
+                            <span class="hidden md:inline">Vitrine</span>
+                        </button>
+                        <button id="btnViewAdmin" onclick="switchView('admin')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span class="hidden md:inline">Painel Admin</span>
+                        </button>
+                        <button id="btnViewPayments" onclick="switchView('payments')" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all flex items-center gap-2">
+                            <i class="fa-solid fa-wallet text-emerald-400"></i>
+                            <span class="hidden md:inline">Pagamentos</span>
+                        </button>
+                    </div>
+
+                    <!-- Admin Status Indicator & Logout Button -->
+                    <div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-xl text-emerald-400 text-xs shadow-sm">
+                        <span class="relative flex h-2 w-2">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span class="hidden lg:inline font-semibold text-[11px]">Admin Ativo</span>
+                        <button onclick="logoutAdmin()" title="Sair do Modo Admin e Ocultar Painel" class="text-slate-400 hover:text-red-400 ml-1 transition">
+                            <i class="fa-solid fa-power-off"></i>
+                        </button>
+                    </div>
+
+                    <!-- Admin Quick Action: New App -->
+                    <button onclick="openAddAppModal()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all shadow-md shadow-indigo-600/20 flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i>
+                        <span class="hidden sm:inline">Novo App</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- FIM: cabeçalho e navegação -->
+
+    <!-- Main Content Area -->
+    <!-- INÍCIO: conteúdo principal e telas da aplicação -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- VISÃO 1: VITRINE DE VENDAS (CLIENTE) -->
+        <!-- INÍCIO: vitrine pública de aplicativos -->
+        <section id="viewMarketplace" class="space-y-10">
+            <!-- Hero Banner Premium -->
+            <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900/90 via-indigo-950/70 to-slate-950 p-8 md:p-12 border border-white/10 shadow-2xl">
+                <!-- Glowing Ambient Lights -->
+                <div class="absolute -top-20 -right-20 w-96 h-96 bg-brand-500/20 rounded-full blur-3xl pointer-events-none animate-pulse-glow"></div>
+                <div class="absolute -bottom-20 -left-20 w-96 h-96 bg-purple-500/15 rounded-full blur-3xl pointer-events-none animate-pulse-glow"></div>
+                
+                <div class="relative z-10 max-w-3xl">
+                    <div class="flex flex-wrap items-center gap-2 mb-4">
+                        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-brand-500/10 text-brand-300 border border-brand-500/30 backdrop-blur-md">
+                            <i class="fa-solid fa-sparkles text-brand-400"></i> Catálogo Oficial de Aplicativos
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                            <i class="fa-solid fa-shield-check"></i> Licença Pronta para Uso
+                        </span>
+                    </div>
+
+                    <h1 class="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight mb-4">
+                        Adquira e Licencie <span class="gradient-brand-text">Aplicativos Prontos</span> para o seu Negócio
+                    </h1>
+                    <p class="text-slate-300 text-sm sm:text-base leading-relaxed mb-8">
+                        Escolha seu sistema móvel ou web, teste a demonstração online e garanta sua licença com aprovação instantânea via <strong>Pix, Cartão em até 12x, PayPal ou Boleto</strong>.
+                    </p>
+                    
+                    <!-- Search & Filter Bar -->
+                    <div class="flex flex-col sm:flex-row gap-3 bg-slate-950/60 p-2 rounded-2xl border border-white/10 backdrop-blur-md shadow-2xl">
+                        <div class="relative flex-1">
+                            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="marketSearch" oninput="filterApps()" placeholder="Buscar por nome do aplicativo, função ou nicho..." class="w-full bg-slate-900/80 text-white text-sm pl-11 pr-4 py-3 rounded-xl border border-slate-800 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all">
+                        </div>
+                        <select id="marketCategory" onchange="filterApps()" class="bg-slate-900/80 text-white text-sm px-4 py-3 rounded-xl border border-slate-800 focus:outline-none focus:border-brand-500 transition-all font-medium">
+                            <option value="ALL">Todas as Categorias</option>
+                            <option value="Delivery">🍔 Delivery & Restaurantes</option>
+                            <option value="Gestão">🛒 Gestão & Finanças</option>
+                            <option value="Utilidades">💈 Utilidades & Agendamento</option>
+                            <option value="E-commerce">🛍️ E-commerce & Vendas</option>
+                            <option value="Saúde">💪 Saúde & Fitness</option>
+                        </select>
+                    </div>
+
+                    <!-- Trust Stats Footbar -->
+                    <div class="mt-8 pt-6 border-t border-white/5 grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs text-slate-400">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-bolt text-amber-400"></i>
+                            <span>Ativação Instantânea</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-code text-indigo-400"></i>
+                            <span>Opção Código Fonte</span>
+                        </div>
+                        <div class="flex items-center gap-2 col-span-2 sm:col-span-1">
+                            <i class="fa-solid fa-headset text-teal-400"></i>
+                            <span>Suporte Técnico VIP</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Apps Catalog Grid -->
+            <div>
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-cubes text-brand-400"></i> Aplicativos Disponíveis
+                        </h2>
+                        <p class="text-xs text-slate-400">Selecione uma aplicação abaixo para testar a versão demonstrativa e contratar seu plano</p>
+                    </div>
+                    <span id="appCountBadge" class="text-xs font-bold bg-slate-900 text-brand-300 px-3.5 py-1.5 rounded-full border border-brand-500/20 shadow-inner">
+                        0 Apps
+                    </span>
+                </div>
+
+                <div id="appsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Dynamic App Cards injected via JavaScript -->
+                </div>
+            </div>
+        </section>
+        <!-- FIM: vitrine pública de aplicativos -->
+
+        <!-- VISÃO 2: PAINEL ADMINISTRATIVO DE APPS -->
+        <!-- INÍCIO: painel administrativo de aplicativos -->
+        <section id="viewAdmin" class="hidden space-y-8">
+            <!-- Header Section -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                <div>
+                    <h1 class="text-2xl font-bold text-white">Painel de Controle de Aplicativos</h1>
+                    <p class="text-xs text-slate-400">Gerencie catálogo de produtos, atualize versões e crie novas ofertas</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="openAccountManagerModal()" class="bg-teal-600 hover:bg-teal-500 text-white text-xs font-medium px-4 py-2.5 rounded-xl transition shadow flex items-center gap-2">
+                        <i class="fa-solid fa-headset text-teal-200"></i> Gestor de Conta
+                    </button>
+                    <button onclick="openAddAppModal()" class="bg-brand-600 hover:bg-brand-500 text-white text-xs font-medium px-4 py-2.5 rounded-xl transition flex items-center gap-2 shadow">
+                        <i class="fa-solid fa-plus"></i> Adicionar Aplicativo
+                    </button>
+                    <button onclick="openLicenseModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium px-4 py-2.5 rounded-xl transition border border-slate-700 flex items-center gap-2">
+                        <i class="fa-solid fa-key"></i> Emitir Licença
+                    </button>
+                </div>
+            </div>
+
+            <!-- Card Gestor de Conta VIP & Suporte -->
+            <div class="glass-card p-5 rounded-2xl border border-teal-500/30 bg-gradient-to-r from-slate-900 via-slate-900 to-teal-950/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="relative">
+                        <div class="w-12 h-12 rounded-2xl bg-teal-500/20 border border-teal-500/40 text-teal-400 flex items-center justify-center text-xl shadow-lg shadow-teal-500/10">
+                            <i class="fa-solid fa-user-tie"></i>
+                        </div>
+                        <span class="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-slate-900 rounded-full" title="Status: Online"></span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 id="mgrDisplayName" class="text-sm font-bold text-white">Carlos Silva - Gestor de Conta VIP</h3>
+                            <span class="text-[10px] bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2.5 py-0.5 rounded-full font-medium">Atendimento Dedicado</span>
+                        </div>
+                        <p id="mgrDisplaySubtitle" class="text-xs text-slate-400 mt-0.5">Suporte prioritário e auxílio técnico para seus Web Apps.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 w-full md:w-auto">
+                    <a id="mgrBtnWhatsapp" href="https://wa.me/5511999999999" target="_blank" class="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition flex items-center justify-center gap-2 shadow shadow-emerald-600/20">
+                        <i class="fa-brands fa-whatsapp text-sm"></i> Falar com Gestor
+                    </a>
+                    <button onclick="openAccountManagerModal()" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition" title="Configurar Gestor">
+                        <i class="fa-solid fa-gear"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPIs -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div class="glass-card p-5 rounded-2xl">
+                    <div class="flex items-center justify-between text-slate-400 text-xs mb-2">
+                        <span>Faturamento Total</span>
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                            <i class="fa-solid fa-dollar-sign"></i>
+                        </div>
+                    </div>
+                    <div id="kpiRevenue" class="text-2xl font-bold text-white">R$ 0,00</div>
+                    <div class="text-[10px] text-emerald-400 mt-1 flex items-center gap-1">
+                        <i class="fa-solid fa-arrow-up"></i> Vendas Confirmadas
+                    </div>
+                </div>
+
+                <div class="glass-card p-5 rounded-2xl">
+                    <div class="flex items-center justify-between text-slate-400 text-xs mb-2">
+                        <span>Apps Cadastrados</span>
+                        <div class="w-8 h-8 rounded-lg bg-brand-500/10 text-brand-400 flex items-center justify-center">
+                            <i class="fa-solid fa-mobile-screen-button"></i>
+                        </div>
+                    </div>
+                    <div id="kpiTotalApps" class="text-2xl font-bold text-white">0</div>
+                    <div class="text-[10px] text-slate-400 mt-1">Disponíveis na vitrine</div>
+                </div>
+
+                <div class="glass-card p-5 rounded-2xl">
+                    <div class="flex items-center justify-between text-slate-400 text-xs mb-2">
+                        <span>Licenças Ativas</span>
+                        <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+                            <i class="fa-solid fa-certificate"></i>
+                        </div>
+                    </div>
+                    <div id="kpiLicenses" class="text-2xl font-bold text-white">0</div>
+                    <div class="text-[10px] text-slate-400 mt-1">Clientes utilizando</div>
+                </div>
+
+                <div class="glass-card p-5 rounded-2xl">
+                    <div class="flex items-center justify-between text-slate-400 text-xs mb-2">
+                        <span>Transações do Mês</span>
+                        <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
+                            <i class="fa-solid fa-receipt"></i>
+                        </div>
+                    </div>
+                    <div id="kpiTransactions" class="text-2xl font-bold text-white">0</div>
+                    <div class="text-[10px] text-purple-400 mt-1">Pedidos de compra</div>
+                </div>
+            </div>
+
+            <!-- Analytics Chart -->
+            <div class="glass-card p-6 rounded-2xl">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-semibold text-white">Distribuição de Apps por Categoria</h3>
+                    <span class="text-xs text-slate-400">Métricas de Catálogo</span>
+                </div>
+                <div class="h-60 relative">
+                    <canvas id="salesChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Apps Table -->
+            <div class="glass-card rounded-2xl overflow-hidden border border-slate-800">
+                <div class="p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-base font-semibold text-white">Gerenciar Aplicativos</h3>
+                        <p class="text-xs text-slate-400">Altere preços, links dos Web Apps e dados técnicos</p>
+                    </div>
+                    <input type="text" id="adminSearchInput" oninput="renderAdminTable()" placeholder="Filtrar aplicativos..." class="bg-slate-950 text-xs text-white px-3 py-2 rounded-lg border border-slate-800 w-full sm:w-64 focus:outline-none focus:border-brand-500">
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                            <tr>
+                                <th class="p-4">Aplicativo</th>
+                                <th class="p-4">Categoria</th>
+                                <th class="p-4">Versão</th>
+                                <th class="p-4">Preço Mensal</th>
+                                <th class="p-4">Preço Vitalício</th>
+                                <th class="p-4 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminAppsTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+                            <!-- Dynamic Rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+        <!-- FIM: painel administrativo de aplicativos -->
+
+        <!-- VISÃO 3: PAINEL DE FORMAS DE PAGAMENTO E VENDAS -->
+        <!-- INÍCIO: gestão de pagamentos e transações -->
+        <section id="viewPayments" class="hidden space-y-8">
+            <!-- Header Section -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                <div>
+                    <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-building-columns text-emerald-400"></i> Gestão de Contas Bancárias & Recebimentos
+                    </h1>
+                    <p class="text-xs text-slate-400">Cadastre a conta bancária do titular, chaves Pix e credenciais dos gateways de pagamento</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-3 py-1.5 rounded-xl font-medium flex items-center gap-2">
+                        <i class="fa-solid fa-lock"></i> Dados Criptografados
+                    </span>
+                </div>
+            </div>
+
+            <!-- Sub Navigation Tabs inside Payment Admin -->
+            <div class="flex border-b border-slate-800 gap-6 text-sm font-medium overflow-x-auto">
+                <button onclick="switchPaymentTab('bank')" id="tabBtnBank" class="pb-3 text-brand-400 border-b-2 border-brand-500 transition-all flex items-center gap-2 whitespace-nowrap font-bold">
+                    <i class="fa-solid fa-university"></i> Conta Bancária Principal
+                </button>
+                <button onclick="switchPaymentTab('gateways')" id="tabBtnGateways" class="pb-3 text-slate-400 hover:text-white transition-all flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-sliders"></i> Gateways de Cartão & API
+                </button>
+                <button onclick="switchPaymentTab('transactions')" id="tabBtnTransactions" class="pb-3 text-slate-400 hover:text-white transition-all flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-money-bill-transfer"></i> Transações & Pedidos
+                </button>
+                <button onclick="switchPaymentTab('security')" id="tabBtnSecurity" class="pb-3 text-slate-400 hover:text-white transition-all flex items-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-key"></i> Senha do Admin
+                </button>
+            </div>
+
+            <!-- TAB 1: BANK ACCOUNT & PIX CONFIGURATION -->
+            <div id="paymentTabBank" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Dados do Titular e Conta Bancária -->
+                <div class="glass-card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <div class="flex items-center gap-3 pb-3 border-b border-slate-800">
+                        <div class="w-10 h-10 rounded-xl bg-brand-500/10 text-brand-400 flex items-center justify-center text-lg font-bold">
+                            <i class="fa-solid fa-building-columns"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-white">Conta Bancária de Recebimento</h3>
+                            <p class="text-[11px] text-slate-400">Onde os valores de vendas diretas serão depositados</p>
+                        </div>
+                    </div>
+
+                    <form onsubmit="saveBankAccountSettings(event)" class="space-y-3 text-xs">
+                        <div>
+                            <label class="block text-slate-300 font-medium mb-1">Razão Social ou Nome do Titular *</label>
+                            <input type="text" id="bankHolderName" required placeholder="Ex: Sua Empresa Negócios Digitais LTDA" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-slate-300 font-medium mb-1">CPF ou CNPJ do Titular *</label>
+                                <input type="text" id="bankDoc" required placeholder="00.000.000/0001-00" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 font-medium mb-1">Instituição Bancária *</label>
+                                <select id="bankName" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                                    <option value="Banco Inter">Banco Inter</option>
+                                    <option value="Nubank / Nu Pagamentos">Nubank / Nu Pagamentos</option>
+                                    <option value="Banco Itaú Unibanco">Banco Itaú Unibanco</option>
+                                    <option value="Banco Bradesco">Banco Bradesco</option>
+                                    <option value="Banco do Brasil">Banco do Brasil</option>
+                                    <option value="Caixa Econômica">Caixa Econômica</option>
+                                    <option value="C6 Bank">C6 Bank</option>
+                                    <option value="Mercado Pago">Mercado Pago</option>
+                                    <option value="Outro">Outro Banco</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-slate-300 font-medium mb-1">Agência</label>
+                                <input type="text" id="bankAgency" placeholder="0001" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 font-medium mb-1">Número Conta</label>
+                                <input type="text" id="bankAccount" placeholder="1234567-8" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-slate-300 font-medium mb-1">Tipo de Conta</label>
+                                <select id="bankAccountType" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                                    <option value="Corrente">Corrente / PJ</option>
+                                    <option value="Poupança">Poupança</option>
+                                    <option value="Pagamento">Pagamento</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-xl transition shadow">
+                            <i class="fa-solid fa-floppy-disk mr-1"></i> Salvar Conta Bancária
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Configuração Específica do Pix -->
+                <div class="glass-card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <div class="flex items-center gap-3 pb-3 border-b border-slate-800">
+                        <div class="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-400 flex items-center justify-center text-lg font-bold">
+                            ❖
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-bold text-white">Chave Pix de Recebimento Instantâneo</h3>
+                            <p class="text-[11px] text-slate-400">Exibida diretamente no checkout do seu cliente</p>
+                        </div>
+                    </div>
+
+                    <form onsubmit="savePixSettings(event)" class="space-y-3 text-xs">
+                        <div>
+                            <label class="block text-slate-300 font-medium mb-1">Chave Pix Oficial (CNPJ / CPF / E-mail / Telefone / Aleatória) *</label>
+                            <input type="text" id="payPixKey" required value="12.345.678/0001-90" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-slate-300 font-medium mb-1">Nome do Titular Exibido na Chave Pix *</label>
+                            <input type="text" id="payPixName" required value="AppHub Digital LTDA" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-slate-300 font-medium mb-1">Desconto para Pagamento via Pix (%)</label>
+                            <input type="number" id="payPixDiscount" value="5" min="0" max="50" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                            <span class="text-[10px] text-slate-500">Ofereça desconto de incentivo para seu cliente pagar no Pix</span>
+                        </div>
+                        <button type="submit" class="w-full py-2.5 bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-xl transition shadow">
+                            <i class="fa-solid fa-floppy-disk mr-1"></i> Salvar Dados do Pix
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- TAB 2: GATEWAYS CONFIGURATION -->
+            <div id="paymentTabGateways" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Cartão de Crédito Gateway Config -->
+                <div class="glass-card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center text-lg">
+                                <i class="fa-solid fa-credit-card"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-white">Cartão de Crédito</h3>
+                                <p class="text-[11px] text-slate-400">Intermediadores de pagamento online</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form onsubmit="saveGatewaySettings(event)" class="space-y-3 text-xs">
+                        <div>
+                            <label class="block text-slate-300 font-medium mb-1">Gateway Ativo</label>
+                            <select id="payCardGateway" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                                <option value="MercadoPago">Mercado Pago (Recomendado Brasil)</option>
+                                <option value="Stripe">Stripe (Internacional)</option>
+                                <option value="Asaas">Asaas Pagamentos</option>
+                                <option value="PagSeguro">PagBank / PagSeguro</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-slate-300 font-medium mb-1">Public Key / Access Token</label>
+                            <input type="text" id="payCardPublicKey" value="APP_USR-789123456789-PUBLIC-KEY" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-slate-300 font-medium mb-1">Parcelamento Máximo Sem Juros</label>
+                            <select id="payCardInstallments" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                                <option value="1">À vista (1x)</option>
+                                <option value="3">Até 3x sem juros</option>
+                                <option value="6" selected>Até 6x sem juros</option>
+                                <option value="12">Até 12x sem juros</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-xl transition">Salvar Credenciais do Gateway</button>
+                    </form>
+                </div>
+
+                <!-- PayPal Config -->
+                <div class="glass-card p-6 rounded-2xl border border-slate-800 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-lg">
+                                <i class="fa-brands fa-paypal"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-white">PayPal Express</h3>
+                                <p class="text-[11px] text-slate-400">Vendas globais e USD/EUR</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form onsubmit="saveGatewaySettings(event)" class="space-y-3 text-xs">
+                        <div>
+                            <label class="block text-slate-300 font-medium mb-1">Email do PayPal Vendedor</label>
+                            <input type="email" id="payPaypalEmail" value="financeiro@apphub.com" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-slate-300 font-medium mb-1">PayPal Client ID (API REST)</label>
+                            <input type="text" id="payPaypalClientId" value="PAYPAL-CLIENT-ID-PRODUCTION-xyz987" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none font-mono">
+                        </div>
+                        <button type="submit" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-xl transition">Salvar PayPal</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- TAB 3: TRANSACTIONS LIST -->
+            <div id="paymentTabTransactions" class="hidden glass-card rounded-2xl overflow-hidden border border-slate-800">
+                <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-base font-bold text-white">Histórico de Transações e Vendas</h3>
+                        <p class="text-xs text-slate-400">Acompanhe e gerencie todos os pagamentos efetuados pelos clientes</p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-900/80 text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
+                            <tr>
+                                <th class="p-3">ID Pedido</th>
+                                <th class="p-3">Cliente</th>
+                                <th class="p-3">Aplicativo</th>
+                                <th class="p-3">Forma Pagto</th>
+                                <th class="p-3">Valor</th>
+                                <th class="p-3">Status</th>
+                                <th class="p-3 text-right">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionsTableBody" class="divide-y divide-slate-800/60 text-slate-300">
+                            <!-- Dynamic Transactions -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 4: SECURITY & ADMIN PIN CHANGE -->
+            <div id="paymentTabSecurity" class="hidden glass-card p-6 rounded-2xl border border-slate-800 max-w-md space-y-4">
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-800">
+                    <div class="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center text-lg font-bold">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Alterar PIN de Acesso Administrativo</h3>
+                        <p class="text-[11px] text-slate-400">Senha usada para proteger a área de pagamentos e dados bancários</p>
+                    </div>
+                </div>
+
+                <form onsubmit="changeAdminPin(event)" class="space-y-3 text-xs">
+                    <div>
+                        <label class="block text-slate-300 font-medium mb-1">PIN Atual *</label>
+                        <input type="password" id="pinCurrent" required placeholder="Digite o PIN atual" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 font-medium mb-1">Novo PIN (Numérico de 4 a 8 dígitos) *</label>
+                        <input type="password" id="pinNew" required maxlength="8" placeholder="Ex: 5678" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 font-medium mb-1">Confirme o Novo PIN *</label>
+                        <input type="password" id="pinConfirm" required maxlength="8" placeholder="Repita o novo PIN" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none font-mono">
+                    </div>
+                    <button type="submit" class="w-full py-2.5 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-xl transition shadow">
+                        Atualizar PIN de Segurança
+                    </button>
+                </form>
+            </div>
+        </section>
+        <!-- FIM: gestão de pagamentos e transações -->
+
+    </main>
+    <!-- FIM: conteúdo principal e telas da aplicação -->
+
+    <!-- INÍCIO: rodapé e acesso administrativo -->
+    <!-- Footer com Link Discreto de Login do Proprietário -->
+    <footer class="border-t border-slate-900 mt-12 py-6 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p>© AppHub Studio - Plataforma de Venda de Aplicativos. Todos os direitos reservados.</p>
+            <button onclick="requireAdminAuth()" class="text-slate-500 hover:text-slate-300 transition flex items-center gap-1 text-[11px]">
+                <i class="fa-solid fa-lock text-[10px]"></i> Acesso Restrito (Administrador)
+            </button>
+        </div>
+    </footer>
+    <!-- FIM: rodapé e acesso administrativo -->
+
+    <!-- INÍCIO: janelas modais e notificações da interface -->
+    <!-- MODAL DE BLOQUEIO / PIN DE SEGURANÇA DO ADMINISTRADOR -->
+    <div id="modalAdminAuth" class="fixed inset-0 z-50 hidden bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-3xl shadow-2xl p-6 text-center space-y-4 relative">
+            <div class="w-16 h-16 rounded-2xl bg-brand-600/20 text-brand-400 border border-brand-500/30 flex items-center justify-center text-3xl mx-auto shadow-lg">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-white">Área Restrita do Proprietário</h3>
+                <p class="text-xs text-slate-400 mt-1">Digite o seu PIN administrativo para acessar o painel de vendas e dados bancários.</p>
+            </div>
+
+            <form onsubmit="handleAdminLogin(event)" class="space-y-4">
+                <div>
+                    <input type="password" id="inputAdminPin" autofocus maxlength="8" placeholder="Digite o PIN (Padrão: 1234)" class="w-full text-center tracking-widest text-lg font-bold bg-slate-950 text-white p-3 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none font-mono">
+                </div>
+                <div class="flex gap-2">
+                    <button type="button" onclick="closeAdminAuthModal()" class="w-1/2 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-semibold">Cancelar</button>
+                    <button type="submit" class="w-1/2 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow">Acessar Painel</button>
+                </div>
+            </form>
+            <span class="text-[10px] text-slate-500 block pt-1">Senha inicial de fábrica: <strong class="text-slate-300">1234</strong></span>
+        </div>
+    </div>
+
+    <!-- MODAL 1: Detalhes do App & Checkout (Visão do Cliente) -->
+    <div id="modalAppDetail" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <!-- Header -->
+            <div class="p-6 border-b border-slate-800 flex items-start justify-between bg-slate-900/50">
+                <div class="flex items-center gap-4">
+                    <div id="modalAppIcon" class="w-16 h-16 rounded-2xl bg-brand-600/20 text-brand-400 border border-brand-500/30 flex items-center justify-center text-3xl font-bold shadow-lg">
+                        📱
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 id="modalAppName" class="text-xl font-bold text-white">Nome do App</h2>
+                            <span id="modalAppBadge" class="text-[10px] bg-brand-500/20 text-brand-300 px-2.5 py-0.5 rounded-full border border-brand-500/30">v1.0</span>
+                        </div>
+                        <p id="modalAppCategory" class="text-xs text-slate-400 mt-0.5">Categoria</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modalAppDetail')" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="p-6 overflow-y-auto space-y-6 flex-1">
+                <div>
+                    <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Descrição Comercial</h4>
+                    <p id="modalAppDesc" class="text-sm text-slate-300 leading-relaxed">
+                        Descrição do app...
+                    </p>
+                </div>
+
+                <div>
+                    <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Recursos Inclusos</h4>
+                    <div id="modalAppFeatures" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <div class="p-4 rounded-2xl bg-slate-950 border border-slate-800">
+                    <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Imagens do Aplicativo</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <figure id="modalClientImageContainer" class="hidden">
+                            <figcaption class="text-[11px] text-slate-400 mb-1">Visão Cliente</figcaption>
+                            <img id="modalClientImage" alt="Imagem do aplicativo na visão do cliente" class="w-full max-h-64 object-contain rounded-xl border border-slate-800 bg-slate-900">
+                        </figure>
+                        <figure id="modalAdminImageContainer" class="hidden">
+                            <figcaption class="text-[11px] text-slate-400 mb-1">Ícone para a tela inicial</figcaption>
+                            <img id="modalAdminImage" alt="Ícone do aplicativo para adicionar à tela inicial do celular" class="w-full max-h-64 object-contain rounded-xl border border-slate-800 bg-slate-900">
+                        </figure>
+                    </div>
+                    <p id="modalImagesEmpty" class="text-[11px] text-slate-500">Nenhuma imagem foi adicionada para este aplicativo.</p>
+                    <button id="addToHomeScreenButton" type="button" onclick="addAppToHomeScreen()" class="hidden mt-3 w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-xs font-semibold text-white transition shadow">
+                        <i class="fa-solid fa-mobile-screen-button mr-1"></i> Adicionar à tela inicial
+                    </button>
+                    <p id="homeScreenInstallHint" class="hidden text-[10px] text-slate-500 mt-2">No iPhone: toque em Compartilhar no Safari e escolha “Adicionar à Tela de Início”.</p>
+                </div>
+
+                <!-- Pricing Plans -->
+                <div>
+                    <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Escolha o Plano de Aquisição</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Mensal -->
+                        <div class="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between space-y-3">
+                            <div>
+                                <span class="text-[10px] font-bold uppercase text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded">Assinatura</span>
+                                <h5 class="text-sm font-bold text-white mt-1">Plano Mensal</h5>
+                                <div id="modalPriceMonthly" class="text-xl font-extrabold text-white mt-2">R$ 99/mês</div>
+                                <ul class="text-[11px] text-slate-400 space-y-1.5 mt-3">
+                                    <li><i class="fa-solid fa-check text-emerald-400 mr-1"></i> Servidor Nuvem</li>
+                                    <li><i class="fa-solid fa-check text-emerald-400 mr-1"></i> Suporte Técnico</li>
+                                </ul>
+                            </div>
+                            <button onclick="startCheckout('Mensal')" class="w-full py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-xs font-semibold text-white transition shadow">
+                                Comprar Mensal
+                            </button>
+                        </div>
+
+                        <!-- Vitalício -->
+                        <div class="p-4 rounded-2xl bg-slate-950 border border-purple-500/40 relative flex flex-col justify-between space-y-3">
+                            <span class="absolute -top-2.5 right-3 text-[9px] font-bold uppercase text-white bg-purple-600 px-2 py-0.5 rounded-full shadow">Mais Vendido</span>
+                            <div>
+                                <span class="text-[10px] font-bold uppercase text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded">Acesso Vitalício</span>
+                                <h5 class="text-sm font-bold text-white mt-1">Licença Definitiva</h5>
+                                <div id="modalPriceLifetime" class="text-xl font-extrabold text-white mt-2">R$ 499</div>
+                                <ul class="text-[11px] text-slate-400 space-y-1.5 mt-3">
+                                    <li><i class="fa-solid fa-check text-emerald-400 mr-1"></i> Sem mensalidades</li>
+                                    <li><i class="fa-solid fa-check text-emerald-400 mr-1"></i> Chave Definitiva</li>
+                                </ul>
+                            </div>
+                            <button onclick="startCheckout('Vitalício')" class="w-full py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-semibold text-white transition shadow">
+                                Comprar Licença
+                            </button>
+                        </div>
+
+                        <!-- Código Fonte -->
+                        <div class="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between space-y-3">
+                            <div>
+                                <span class="text-[10px] font-bold uppercase text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">Revenda PRO</span>
+                                <h5 class="text-sm font-bold text-white mt-1">Código Fonte</h5>
+                                <div id="modalPriceSource" class="text-xl font-extrabold text-white mt-2">R$ 1.299</div>
+                                <ul class="text-[11px] text-slate-400 space-y-1.5 mt-3">
+                                    <li><i class="fa-solid fa-check text-emerald-400 mr-1"></i> Projeto Completo (.zip)</li>
+                                    <li><i class="fa-solid fa-check text-emerald-400 mr-1"></i> Direito de Revenda</li>
+                                </ul>
+                            </div>
+                            <button onclick="startCheckout('Código Fonte')" class="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white transition shadow">
+                                Adquirir Código
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Modal de Checkout e Forma de Pagamento Instantânea -->
+    <div id="modalCheckout" class="fixed inset-0 z-50 hidden bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            <!-- Checkout Header -->
+            <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
+                <div>
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-lock text-emerald-400"></i> Checkout Seguro
+                    </h3>
+                    <p id="checkoutSummaryText" class="text-xs text-slate-400">Resumo do pedido...</p>
+                </div>
+                <button onclick="closeModal('modalCheckout')" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-5 text-xs">
+                <!-- Customer Details Form -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-medium text-slate-300 mb-1">Seu Nome / Razão Social *</label>
+                        <input type="text" id="chkCustomerName" placeholder="Ex: João da Silva" required class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-300 mb-1">Seu E-mail (Receber Licença) *</label>
+                        <input type="email" id="chkCustomerEmail" placeholder="joao@empresa.com" required class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- Payment Method Selector Tabs -->
+                <div>
+                    <label class="block font-medium text-slate-300 mb-2">Escolha a Forma de Pagamento</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button type="button" onclick="selectCheckoutMethod('pix')" id="chkMethodPix" class="p-3 rounded-xl border border-emerald-500/50 bg-emerald-500/10 text-emerald-400 flex flex-col items-center gap-1 font-semibold transition">
+                            <span class="text-base">❖</span>
+                            <span class="text-[10px]">Pix Instantâneo</span>
+                        </button>
+                        <button type="button" onclick="selectCheckoutMethod('card')" id="chkMethodCard" class="p-3 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white flex flex-col items-center gap-1 transition">
+                            <i class="fa-solid fa-credit-card text-base"></i>
+                            <span class="text-[10px]">Cartão</span>
+                        </button>
+                        <button type="button" onclick="selectCheckoutMethod('paypal')" id="chkMethodPaypal" class="p-3 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white flex flex-col items-center gap-1 transition">
+                            <i class="fa-brands fa-paypal text-base"></i>
+                            <span class="text-[10px]">PayPal</span>
+                        </button>
+                        <button type="button" onclick="selectCheckoutMethod('boleto')" id="chkMethodBoleto" class="p-3 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white flex flex-col items-center gap-1 transition">
+                            <i class="fa-solid fa-barcode text-base"></i>
+                            <span class="text-[10px]">Boleto</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PAYMENT METHOD DISPLAY PANELS -->
+                <!-- 1. PIX PANEL -->
+                <div id="payPanelPix" class="p-4 rounded-2xl bg-slate-950 border border-emerald-500/30 text-center space-y-3">
+                    <div class="inline-block p-3 bg-white rounded-xl shadow-lg">
+                        <svg class="w-32 h-32 mx-auto" viewBox="0 0 100 100">
+                            <path d="M0,0 h30 v30 h-30 z M40,0 h20 v10 h-20 z M70,0 h30 v30 h-30 z M0,40 h10 v20 h-10 z M30,40 h40 v10 h-40 z M80,40 h20 v20 h-20 z M0,70 h30 v30 h-30 z M40,80 h30 v20 h-30 z M80,70 h20 v30 h-20 z" fill="#0f172a"/>
+                        </svg>
+                    </div>
+                    <div class="text-xs text-slate-300">
+                        Aprovação instantânea! Pague com Pix e receba sua licença na hora.
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="text" readonly id="pixCopiaColaInput" value="00020126580014br.gov.bcb.pix0136apphub-vendas-chavelink-5544332211" class="w-full bg-slate-900 text-slate-400 text-[11px] p-2 rounded-lg border border-slate-800 select-all font-mono">
+                        <button onclick="copyPixCode()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg text-xs whitespace-nowrap">
+                            <i class="fa-solid fa-copy"></i> Copiar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. CARD PANEL -->
+                <div id="payPanelCard" class="hidden p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                    <div>
+                        <label class="block text-slate-400 mb-1">Número do Cartão</label>
+                        <input type="text" placeholder="0000 0000 0000 0000" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-800 focus:border-brand-500 focus:outline-none font-mono">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-slate-400 mb-1">Validade (MM/AA)</label>
+                            <input type="text" placeholder="12/28" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-800 focus:border-brand-500 focus:outline-none text-center">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">CVV</label>
+                            <input type="text" placeholder="123" class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-800 focus:border-brand-500 focus:outline-none text-center">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 mb-1">Opções de Parcelamento</label>
+                        <select class="w-full bg-slate-900 text-white p-2.5 rounded-lg border border-slate-800 focus:border-brand-500 focus:outline-none">
+                            <option value="1">1x à vista (sem juros)</option>
+                            <option value="2">2x no cartão (sem juros)</option>
+                            <option value="3">3x no cartão (sem juros)</option>
+                            <option value="6">6x no cartão (sem juros)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 3. PAYPAL PANEL -->
+                <div id="payPanelPaypal" class="hidden p-4 rounded-2xl bg-slate-950 border border-slate-800 text-center space-y-3">
+                    <i class="fa-brands fa-paypal text-3xl text-indigo-400"></i>
+                    <p class="text-xs text-slate-300">Você será redirecionado para a plataforma segura do PayPal para concluir a transação.</p>
+                </div>
+
+                <!-- 4. BOLETO PANEL -->
+                <div id="payPanelBoleto" class="hidden p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2 text-center">
+                    <i class="fa-solid fa-barcode text-3xl text-orange-400"></i>
+                    <p class="text-xs text-slate-300">O boleto será gerado com vencimento em 3 dias úteis. A liberação do código ocorre após compensação bancária.</p>
+                </div>
+
+                <!-- Submit Button -->
+                <button onclick="processCheckoutPayment()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition shadow-lg shadow-emerald-600/20 text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-check-circle"></i> Confirmar e Pagar Agora
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Cadastro/Edição de App (Admin) -->
+    <div id="modalAddApp" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+                <h3 id="modalAppFormTitle" class="text-lg font-bold text-white">Cadastrar Novo Aplicativo</h3>
+                <button onclick="closeModal('modalAddApp')" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="appForm" onsubmit="saveAppForm(event)" class="p-6 overflow-y-auto space-y-4 text-xs">
+                <input type="hidden" id="formAppId">
+                
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="sm:col-span-2">
+                        <label class="block font-medium text-slate-300 mb-1">Nome do Aplicativo *</label>
+                        <input type="text" id="formName" required placeholder="Ex: GestorPro - Vendas & Estoque" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-300 mb-1">Ícone Emoji</label>
+                        <input type="text" id="formIcon" required placeholder="Ex: 🛍️, 🚚" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none text-center">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-medium text-slate-300 mb-1">Categoria *</label>
+                        <select id="formCategory" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                            <option value="Delivery">Delivery & Restaurantes</option>
+                            <option value="Gestão">Gestão & Finanças</option>
+                            <option value="Utilidades">Utilidades & Agendamento</option>
+                            <option value="E-commerce">E-commerce & Vendas</option>
+                            <option value="Saúde">Saúde & Fitness</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-medium text-slate-300 mb-1">Versão do App</label>
+                        <input type="text" id="formVersion" placeholder="v1.0" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label for="formClientImage" class="block font-medium text-slate-300 mb-1">Imagem do App (Visão Cliente)</label>
+                        <input type="file" id="formClientImage" accept="image/png,image/jpeg,image/webp" onchange="previewUploadedImage(this, 'formClientImagePreviewContainer', 'formClientImagePreview')" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:px-3 file:py-1 file:text-white">
+                        <p class="text-[10px] text-slate-500 mt-1">Imagem PNG, JPG ou WEBP, até 2 MB.</p>
+                        <div id="formClientImagePreviewContainer" class="hidden mt-2">
+                            <img id="formClientImagePreview" alt="Prévia da imagem da visão cliente" class="w-full max-h-32 object-contain rounded-lg border border-slate-800 bg-slate-900">
+                        </div>
+                    </div>
+                    <div>
+                        <label for="formAdminImage" class="block font-medium text-slate-300 mb-1">Ícone do App (Adicionar à Tela Inicial)</label>
+                        <input type="file" id="formAdminImage" accept="image/png,image/jpeg,image/webp" onchange="previewUploadedImage(this, 'formAdminImagePreviewContainer', 'formAdminImagePreview')" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none file:mr-3 file:rounded-lg file:border-0 file:bg-brand-600 file:px-3 file:py-1 file:text-white">
+                        <p class="text-[10px] text-slate-500 mt-1">Use um ícone quadrado (ideal: 512 × 512 px), PNG, JPG ou WEBP, até 2 MB.</p>
+                        <div id="formAdminImagePreviewContainer" class="hidden mt-2">
+                            <img id="formAdminImagePreview" alt="Prévia da imagem do painel admin" class="w-full max-h-32 object-contain rounded-lg border border-slate-800 bg-slate-900">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-medium text-slate-300 mb-1">Descrição Comercial</label>
+                    <textarea id="formDesc" rows="3" required placeholder="Descreva os principais recursos e diferenciais..." class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none"></textarea>
+                </div>
+
+                <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
+                    <span class="font-semibold text-brand-400 block">Valores dos Planos (R$)</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-slate-400 mb-1">Preço Mensal (R$)</label>
+                            <input type="number" step="0.01" id="formPriceMonthly" required placeholder="99.00" class="w-full bg-slate-900 text-white p-2 rounded-lg border border-slate-800 focus:border-brand-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">Preço Vitalício (R$)</label>
+                            <input type="number" step="0.01" id="formPriceLifetime" required placeholder="499.00" class="w-full bg-slate-900 text-white p-2 rounded-lg border border-slate-800 focus:border-brand-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">Preço Cód. Fonte (R$)</label>
+                            <input type="number" step="0.01" id="formPriceSource" required placeholder="1299.00" class="w-full bg-slate-900 text-white p-2 rounded-lg border border-slate-800 focus:border-brand-500 focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-medium text-slate-300 mb-1">Recursos (separados por vírgula)</label>
+                    <input type="text" id="formFeatures" placeholder="Impressão Bluetooth, Modo Offline, Pix Automático" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                </div>
+
+                <div class="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                    <button type="button" onclick="closeModal('modalAddApp')" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700">Cancelar</button>
+                    <button type="submit" class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold shadow">Salvar Aplicativo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 4: Gerar Chave de Licença -->
+    <div id="modalLicense" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl shadow-2xl p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-key text-brand-400"></i> Emissão Manual de Licença
+                </h3>
+                <button onclick="closeModal('modalLicense')" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form onsubmit="generateManualLicense(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-medium text-slate-300 mb-1">Selecione o Aplicativo *</label>
+                    <select id="licAppSelect" required class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                        <!-- Dynamic Options -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-300 mb-1">Nome do Cliente *</label>
+                    <input type="text" id="licCustomerName" required placeholder="Ex: Cliente VIP Empresa" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-300 mb-1">Plano Adquirido</label>
+                    <select id="licPlanSelect" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-brand-500 focus:outline-none">
+                        <option value="Mensal">Assinatura Mensal</option>
+                        <option value="Vitalício" selected>Licença Definitiva / Vitalícia</option>
+                        <option value="Código Fonte">Código Fonte / Revenda</option>
+                    </select>
+                </div>
+
+                <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                    <span class="text-[10px] text-slate-400 block">Chave Gerada:</span>
+                    <input type="text" readonly id="licOutputKey" value="LIC-XXXX-XXXX-XXXX" class="w-full bg-slate-900 text-brand-300 font-mono text-center p-2 rounded-lg border border-slate-800 font-bold select-all">
+                </div>
+
+                <div class="pt-2 flex gap-2">
+                    <button type="button" onclick="closeModal('modalLicense')" class="w-1/3 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 font-semibold">Sair</button>
+                    <button type="submit" class="w-2/3 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold shadow">Gerar Licença</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 5: Configurar / Contatar Gestor de Conta -->
+    <div id="modalAccountManager" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-3xl shadow-2xl p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-user-tie text-teal-400"></i> Gestor de Conta & Suporte
+                </h3>
+                <button onclick="closeModal('modalAccountManager')" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form onsubmit="saveAccountManagerSettings(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-medium text-slate-300 mb-1">Nome do Gestor de Conta *</label>
+                    <input type="text" id="mgrInputName" required placeholder="Ex: Carlos Silva" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-slate-800 focus:border-teal-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-300 mb-1">Cargo / Descrição *</label>
+                    <input type="text" id="mgrInputRole" required placeholder="Ex: Gerente de Suporte VIP" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-teal-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-300 mb-1">Link Direto do WhatsApp *</label>
+                    <input type="url" id="mgrInputWa" required placeholder="https://wa.me/5511999999999" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-teal-500 focus:border-teal-500 focus:outline-none font-mono">
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-300 mb-1">E-mail de Atendimento</label>
+                    <input type="email" id="mgrInputEmail" placeholder="gestor@seuportal.com" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-teal-500 focus:border-teal-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block font-medium text-slate-300 mb-1">Link do Portal de Gerenciamento</label>
+                    <input type="url" id="mgrInputPortal" placeholder="https://seuportal.com" class="w-full bg-slate-950 text-white p-2.5 rounded-xl border border-teal-500 focus:border-teal-500 focus:outline-none font-mono">
+                </div>
+
+                <div class="pt-2 flex gap-2">
+                    <button type="button" onclick="closeModal('modalAccountManager')" class="w-1/3 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 font-semibold">Cancelar</button>
+                    <button type="submit" class="w-2/3 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-semibold shadow">Salvar Dados do Gestor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 border border-brand-500/50 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs pointer-events-none">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+        <span id="toastMsg">Ação realizada com sucesso!</span>
+    </div>
+    <!-- FIM: janelas modais e notificações da interface -->
+
+    <!-- ==========================================================================
+       LÓGICA DO APLICATIVO E DADOS (JAVASCRIPT 100% COMPLETO E FUNCIONAL)
+       ========================================================================== -->
+    <!-- INÍCIO: lógica JavaScript da aplicação -->
+    <script>
+        // Dados Padrão de Inicialização
+        const DEFAULT_APPS = [
+            {
+                id: 'app-1',
+                name: 'DeliveryExpress - Sistema para Restaurantes',
+                icon: '🍔',
+                category: 'Delivery',
+                version: 'v2.4.0',
+                desc: 'Aplicativo completo de delivery com cardápio digital, impressão automática de comandas, integração com WhatsApp e mapa de entregas em tempo real.',
+                features: ['Cardápio Digital QR Code', 'Impressão Bluetooth', 'Notificação Push', 'Modo Offline'],
+                priceMonthly: 89.90,
+                priceLifetime: 499.00,
+                priceSource: 1290.00,
+                apkUrl: 'https://demo.deliveryexpress.com',
+                webUrl: 'https://admin-demo.deliveryexpress.com'
+            },
+            {
+                id: 'app-2',
+                name: 'GestorPro - Vendas & Controle Financeiro',
+                icon: '🛒',
+                category: 'Gestão',
+                version: 'v3.1.2',
+                desc: 'Sistema PDV completo para comércio, controle de estoque, emissão de relatórios de faturamento e gestão de clientes.',
+                features: ['PDV Frente de Caixa', 'Controle de Estoque', 'Relatórios PDF/Excel', 'Cobrança Pix Automatic'],
+                priceMonthly: 119.00,
+                priceLifetime: 699.00,
+                priceSource: 1890.00,
+                apkUrl: 'https://demo.gestorpro.com',
+                webUrl: 'https://admin-demo.gestorpro.com'
+            },
+            {
+                id: 'app-3',
+                name: 'BarberClub - Agendamento para Barbearias',
+                icon: '💈',
+                category: 'Utilidades',
+                version: 'v1.8.5',
+                desc: 'Aplicativo para barbearias e salões com agendamento online de horários, escolha de profissional, lembretes por WhatsApp e programa de fidelidade.',
+                features: ['Agenda Online 24/7', 'Lembrete WhatsApp', 'Comissão de Barbeiros', 'Clube de Fidelidade'],
+                priceMonthly: 69.90,
+                priceLifetime: 399.00,
+                priceSource: 990.00,
+                apkUrl: 'https://demo.barberclub.com',
+                webUrl: 'https://admin-demo.barberclub.com'
+            }
+        ];
+
+        const DEFAULT_TRANSACTIONS = [
+            { id: 'ORD-9821', customerName: 'Marcos Oliveira', customerEmail: 'marcos@email.com', appName: 'DeliveryExpress', plan: 'Vitalício', method: 'Pix', amount: 474.05, date: '2026-10-06 14:20', status: 'Aprovado' },
+            { id: 'ORD-9820', customerName: 'Camila Santos', customerEmail: 'camila@email.com', appName: 'GestorPro', plan: 'Mensal', method: 'Cartão', amount: 119.00, date: '2026-10-06 11:05', status: 'Aprovado' }
+        ];
+
+        // Estado do Aplicativo com armazenamento resiliente via LocalStorage
+        let apps = JSON.parse(localStorage.getItem('apphub_apps')) || DEFAULT_APPS;
+        const API_BASE_URL = new URL('.', window.location.href);
+        let deferredInstallPrompt = null;
+        const installAppIdFromUrl = new URLSearchParams(window.location.search).get('installApp');
+
+        function setAppManifest(appId) {
+            const manifestUrl = new URL('manifest.php', API_BASE_URL);
+            if (appId) manifestUrl.searchParams.set('app', appId);
+            document.getElementById('appManifestLink').href = manifestUrl.href;
+        }
+
+        setAppManifest(installAppIdFromUrl);
+
+        window.addEventListener('beforeinstallprompt', event => {
+            event.preventDefault();
+            deferredInstallPrompt = event;
+        });
+
+        async function requestSharedApps(url, options = {}) {
+            const response = await fetch(url, options);
+            const responseText = await response.text();
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch {
+                const details = responseText.trim().slice(0, 180);
+                throw new Error(`A API respondeu com HTTP ${response.status} em ${url}.${details ? ` Resposta: ${details}` : ''}`);
+            }
+            if (!response.ok) {
+                throw new Error(result.error || `Erro HTTP ${response.status} ao acessar ${url}.`);
+            }
+            return result;
+        }
+
+        async function loadSharedApps() {
+            try {
+                let result = await requestSharedApps(new URL('apps.php', API_BASE_URL), {
+                    headers: { Accept: 'application/json' }
+                });
+                if (!Array.isArray(result.apps)) {
+                    const savedApps = localStorage.getItem('apphub_apps');
+                    const initialApps = savedApps ? JSON.parse(savedApps) : DEFAULT_APPS;
+                    if (!Array.isArray(initialApps)) {
+                        throw new Error('A lista local de aplicativos é inválida.');
+                    }
+                    result = await requestSharedApps(new URL('apps.php', API_BASE_URL), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                        body: JSON.stringify({ apps: initialApps })
+                    });
+                }
+                apps = result.apps;
+            } catch (error) {
+                console.error('Não foi possível carregar o catálogo compartilhado:', error);
+                showToast('Catálogo compartilhado indisponível. Verifique o servidor.', true);
+            }
+        }
+
+        async function persistSharedApps(nextApps) {
+            const result = await requestSharedApps(new URL('apps.php', API_BASE_URL), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({ apps: nextApps })
+            });
+            apps = result.apps;
+        }
+        let transactions = JSON.parse(localStorage.getItem('apphub_transactions')) || DEFAULT_TRANSACTIONS;
+        let licenses = JSON.parse(localStorage.getItem('apphub_licenses')) || [];
+        let adminPin = localStorage.getItem('apphub_pin') || '1234';
+        let isAdminLoggedIn = sessionStorage.getItem('apphub_admin_logged') === 'true';
+
+        let bankSettings = JSON.parse(localStorage.getItem('apphub_bank')) || {
+            holderHolder: 'Sua Empresa Negócios Digitais LTDA',
+            doc: '12.345.678/0001-90',
+            bankName: 'Banco Inter',
+            agency: '0001',
+            account: '1234567-8',
+            accountType: 'Corrente'
+        };
+
+        let pixSettings = JSON.parse(localStorage.getItem('apphub_pix')) || {
+            key: '12.345.678/0001-90',
+            name: 'AppHub Digital LTDA',
+            discount: 5
+        };
+
+        let accountManager = JSON.parse(localStorage.getItem('apphub_manager')) || {
+            name: 'Carlos Silva - Gestor de Conta VIP',
+            role: 'Atendimento Dedicado & Suporte Técnico',
+            wa: 'https://wa.me/5511999999999',
+            email: 'gestor@seuportal.com',
+            portal: 'https://seuportal.com'
+        };
+
+        let activeAppForCheckout = null;
+        let activePlanForCheckout = 'Vitalício';
+        let activePaymentMethod = 'pix';
+        let chartInstance = null;
+
+        // INÍCIO: autenticação e modo administrador
+        // --- SISTEMA DE AUTENTICAÇÃO E MODO ADMIN ---
+        function requireAdminAuth() {
+            if (isAdminLoggedIn) {
+                switchView('admin');
+            } else {
+                document.getElementById('modalAdminAuth').classList.remove('hidden');
+                document.getElementById('inputAdminPin').focus();
+            }
+        }
+
+        function closeAdminAuthModal() {
+            document.getElementById('modalAdminAuth').classList.add('hidden');
+            document.getElementById('inputAdminPin').value = '';
+        }
+
+        function handleAdminLogin(e) {
+            e.preventDefault();
+            const typedPin = document.getElementById('inputAdminPin').value.trim();
+            if (typedPin === adminPin) {
+                isAdminLoggedIn = true;
+                sessionStorage.setItem('apphub_admin_logged', 'true');
+                closeAdminAuthModal();
+                updateAdminUIVisibility();
+                switchView('admin');
+                showToast('Acesso administrativo ativado com sucesso!', false);
+            } else {
+                showToast('PIN incorreto! Tente novamente.', true);
+                document.getElementById('inputAdminPin').value = '';
+            }
+        }
+
+        function logoutAdmin() {
+            isAdminLoggedIn = false;
+            sessionStorage.removeItem('apphub_admin_logged');
+            updateAdminUIVisibility();
+            switchView('marketplace');
+            showToast('Modo administrativo encerrado.', false);
+        }
+
+        function updateAdminUIVisibility() {
+            const triggerBtn = document.getElementById('btnAdminLoginTrigger');
+            const adminGroup = document.getElementById('adminControlsGroup');
+
+            if (isAdminLoggedIn) {
+                triggerBtn.classList.add('hidden');
+                adminGroup.classList.remove('hidden');
+                adminGroup.classList.add('flex');
+            } else {
+                triggerBtn.classList.remove('hidden');
+                adminGroup.classList.add('hidden');
+                adminGroup.classList.remove('flex');
+            }
+        }
+
+        // FIM: autenticação e modo administrador
+        // INÍCIO: troca entre as telas principais
+        // --- SWITCHER DE VISÕES (VITRINE / ADMIN / PAGAMENTOS) ---
+        function switchView(viewName) {
+            if ((viewName === 'admin' || viewName === 'payments') && !isAdminLoggedIn) {
+                requireAdminAuth();
+                return;
+            }
+
+            document.getElementById('viewMarketplace').classList.add('hidden');
+            document.getElementById('viewAdmin').classList.add('hidden');
+            document.getElementById('viewPayments').classList.add('hidden');
+
+            const btnMkt = document.getElementById('btnViewMarketplace');
+            const btnAdm = document.getElementById('btnViewAdmin');
+            const btnPay = document.getElementById('btnViewPayments');
+
+            const inactiveClass = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all flex items-center gap-2';
+            const activeClass = 'px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 bg-gradient-to-r from-brand-600 to-indigo-600 text-white shadow-md shadow-brand-500/20';
+
+            btnMkt.className = inactiveClass;
+            btnAdm.className = inactiveClass;
+            btnPay.className = inactiveClass;
+
+            if (viewName === 'marketplace') {
+                document.getElementById('viewMarketplace').classList.remove('hidden');
+                btnMkt.className = activeClass;
+                renderMarketplace();
+            } else if (viewName === 'admin') {
+                document.getElementById('viewAdmin').classList.remove('hidden');
+                btnAdm.className = activeClass;
+                renderAdmin();
+            } else if (viewName === 'payments') {
+                document.getElementById('viewPayments').classList.remove('hidden');
+                btnPay.className = activeClass;
+                loadPaymentFormValues();
+                renderTransactionsTable();
+            }
+        }
+
+        // FIM: troca entre as telas principais
+        // INÍCIO: vitrine, filtros e detalhes dos aplicativos
+        // --- VITRINE DE VENDAS DA PLATAFORMA ---
+        function renderMarketplace() {
+            const grid = document.getElementById('appsGrid');
+            const searchVal = document.getElementById('marketSearch').value.toLowerCase();
+            const catVal = document.getElementById('marketCategory').value;
+
+            const filtered = apps.filter(app => {
+                const matchesSearch = app.name.toLowerCase().includes(searchVal) || app.desc.toLowerCase().includes(searchVal);
+                const matchesCat = (catVal === 'ALL') || (app.category === catVal);
+                return matchesSearch && matchesCat;
+            });
+
+            document.getElementById('appCountBadge').textContent = `${filtered.length} Apps Disponíveis`;
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-16 glass-card rounded-3xl border border-slate-800">
+                        <div class="w-16 h-16 bg-slate-900 border border-slate-800 text-slate-500 rounded-2xl flex items-center justify-center text-2xl mx-auto mb-3">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white">Nenhum aplicativo encontrado</h3>
+                        <p class="text-xs text-slate-400 mt-1">Tente pesquisar com outros termos ou altere a categoria selecionada.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(app => `
+                <div class="glass-card glass-card-hover rounded-3xl p-6 border border-slate-800/80 flex flex-col justify-between group relative overflow-hidden">
+                    <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-500 via-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                    <div>
+                        <div class="flex items-start justify-between mb-5">
+                            <div class="relative">
+                                <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-white/10 flex items-center justify-center text-3xl shadow-xl group-hover:scale-105 transition-transform duration-300">
+                                    ${app.icon || '📱'}
+                                </div>
+                                <span class="absolute -bottom-1 -right-1 text-[10px] font-extrabold bg-slate-900 text-slate-300 border border-slate-700 px-1.5 py-0.5 rounded-md">
+                                    ${app.version || 'v1.0'}
+                                </span>
+                            </div>
+                            
+                            <span class="text-[11px] font-bold bg-brand-500/10 text-brand-300 border border-brand-500/20 px-3 py-1 rounded-full shadow-sm">
+                                ${app.category}
+                            </span>
+                        </div>
+
+                        <h3 class="text-lg font-bold text-white group-hover:text-brand-400 transition-colors mb-2 leading-snug">${app.name}</h3>
+                        <p class="text-xs text-slate-400 line-clamp-3 mb-5 leading-relaxed">${app.desc}</p>
+
+                        <div class="flex flex-wrap gap-1.5 mb-6">
+                            ${(app.features || []).slice(0, 3).map(f => `
+                                <span class="text-[10px] bg-slate-950/80 text-slate-300 px-2.5 py-1 rounded-lg border border-slate-800 flex items-center gap-1 font-medium">
+                                    <i class="fa-solid fa-circle-check text-emerald-400 text-[9px]"></i> ${f}
+                                </span>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between mt-auto">
+                        <div>
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-500 block mb-0.5">A partir de</span>
+                            <div class="text-lg font-black text-emerald-400">
+                                R$ ${Number(app.priceMonthly).toFixed(2)}<span class="text-[10px] text-slate-400 font-normal">/mês</span>
+                            </div>
+                        </div>
+                        <button onclick="openAppDetailModal('${app.id}')" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-brand-500/20 flex items-center gap-2 group-hover:scale-105">
+                            <span>Ver Planos</span>
+                            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterApps() {
+            renderMarketplace();
+        }
+
+        function openAppDetailModal(appId) {
+            const app = apps.find(a => a.id === appId);
+            if (!app) return;
+
+            activeAppForCheckout = app;
+            document.title = `${app.name} - AppHub Studio`;
+            setAppManifest(app.id);
+            document.getElementById('appleTouchIcon').href = app.adminImage || app.iconImage || document.getElementById('appleTouchIcon').href;
+            document.getElementById('addToHomeScreenButton').classList.toggle('hidden', !(app.adminImage || app.iconImage));
+            document.getElementById('homeScreenInstallHint').classList.toggle(
+                'hidden',
+                !(app.adminImage || app.iconImage) || !/iPhone|iPad|iPod/i.test(navigator.userAgent)
+            );
+
+            document.getElementById('modalAppIcon').textContent = app.icon || '📱';
+            document.getElementById('modalAppName').textContent = app.name;
+            document.getElementById('modalAppBadge').textContent = app.version || 'v1.0';
+            document.getElementById('modalAppCategory').textContent = app.category;
+            document.getElementById('modalAppDesc').textContent = app.desc;
+
+            const featuresContainer = document.getElementById('modalAppFeatures');
+            featuresContainer.innerHTML = (app.features || []).map(f => `
+                <span class="text-xs bg-slate-950 text-slate-300 px-3 py-1.5 rounded-xl border border-slate-800 flex items-center gap-1.5">
+                    <i class="fa-solid fa-check text-emerald-400"></i> ${f}
+                </span>
+            `).join('');
+
+            const hasClientImage = Boolean(app.clientImage);
+            const installIcon = app.adminImage || app.iconImage || '';
+            const hasAdminImage = Boolean(installIcon);
+            document.getElementById('modalClientImage').src = app.clientImage || '';
+            document.getElementById('modalAdminImage').src = installIcon;
+            document.getElementById('modalClientImageContainer').classList.toggle('hidden', !hasClientImage);
+            document.getElementById('modalAdminImageContainer').classList.toggle('hidden', !hasAdminImage);
+            document.getElementById('modalImagesEmpty').classList.toggle('hidden', hasClientImage || hasAdminImage);
+
+            document.getElementById('modalPriceMonthly').textContent = `R$ ${Number(app.priceMonthly).toFixed(2)}/mês`;
+            document.getElementById('modalPriceLifetime').textContent = `R$ ${Number(app.priceLifetime).toFixed(2)}`;
+            document.getElementById('modalPriceSource').textContent = `R$ ${Number(app.priceSource).toFixed(2)}`;
+
+            document.getElementById('modalAppDetail').classList.remove('hidden');
+        }
+
+        async function addAppToHomeScreen() {
+            const app = activeAppForCheckout;
+            if (!app || !(app.adminImage || app.iconImage)) {
+                showToast('Adicione um ícone para este aplicativo primeiro.', true);
+                return;
+            }
+
+            const currentUrl = new URL(window.location.href);
+            if (currentUrl.searchParams.get('installApp') !== app.id) {
+                currentUrl.searchParams.set('installApp', app.id);
+                window.location.assign(currentUrl.href);
+                return;
+            }
+
+            if (deferredInstallPrompt) {
+                const promptEvent = deferredInstallPrompt;
+                deferredInstallPrompt = null;
+                await promptEvent.prompt();
+                const choice = await promptEvent.userChoice;
+                if (choice.outcome === 'accepted') {
+                    showToast('Aplicativo adicionado à tela inicial.', false);
+                }
+                return;
+            }
+
+            showToast('Use o menu do navegador e escolha “Adicionar à tela inicial”.', false);
+        }
+
+        // FIM: vitrine, filtros e detalhes dos aplicativos
+        // INÍCIO: checkout e registro de pedidos
+        // --- CHECKOUT E PAGAMENTO INSTANTÂNEO ---
+        function startCheckout(planName) {
+            if (!activeAppForCheckout) return;
+            activePlanForCheckout = planName;
+
+            closeModal('modalAppDetail');
+            document.getElementById('modalCheckout').classList.remove('hidden');
+
+            let price = activeAppForCheckout.priceLifetime;
+            if (planName === 'Mensal') price = activeAppForCheckout.priceMonthly;
+            if (planName === 'Código Fonte') price = activeAppForCheckout.priceSource;
+
+            document.getElementById('checkoutSummaryText').textContent = `${activeAppForCheckout.name} (${planName}) - R$ ${price.toFixed(2)}`;
+            
+            // Atualiza chave Pix e copia e cola
+            document.getElementById('pixCopiaColaInput').value = `00020126580014br.gov.bcb.pix0136${pixSettings.key.replace(/[^a-zA-Z0-9]/g, '')}-5544332211`;
+
+            selectCheckoutMethod('pix');
+        }
+
+        function selectCheckoutMethod(method) {
+            activePaymentMethod = method;
+
+            const btnPix = document.getElementById('chkMethodPix');
+            const btnCard = document.getElementById('chkMethodCard');
+            const btnPaypal = document.getElementById('chkMethodPaypal');
+            const btnBoleto = document.getElementById('chkMethodBoleto');
+
+            const activeClass = 'p-3 rounded-xl border border-emerald-500/50 bg-emerald-500/10 text-emerald-400 flex flex-col items-center gap-1 font-semibold transition';
+            const inactiveClass = 'p-3 rounded-xl border border-slate-800 bg-slate-950 text-slate-400 hover:text-white flex flex-col items-center gap-1 transition';
+
+            btnPix.className = inactiveClass;
+            btnCard.className = inactiveClass;
+            btnPaypal.className = inactiveClass;
+            btnBoleto.className = inactiveClass;
+
+            document.getElementById('payPanelPix').classList.add('hidden');
+            document.getElementById('payPanelCard').classList.add('hidden');
+            document.getElementById('payPanelPaypal').classList.add('hidden');
+            document.getElementById('payPanelBoleto').classList.add('hidden');
+
+            if (method === 'pix') {
+                btnPix.className = activeClass;
+                document.getElementById('payPanelPix').classList.remove('hidden');
+            } else if (method === 'card') {
+                btnCard.className = activeClass;
+                document.getElementById('payPanelCard').classList.remove('hidden');
+            } else if (method === 'paypal') {
+                btnPaypal.className = activeClass;
+                document.getElementById('payPanelPaypal').classList.remove('hidden');
+            } else if (method === 'boleto') {
+                btnBoleto.className = activeClass;
+                document.getElementById('payPanelBoleto').classList.remove('hidden');
+            }
+        }
+
+        function copyPixCode() {
+            const input = document.getElementById('pixCopiaColaInput');
+            input.select();
+            document.execCommand('copy');
+            showToast('Chave Pix Copiada com Sucesso!', false);
+        }
+
+        function processCheckoutPayment() {
+            const cName = document.getElementById('chkCustomerName').value.trim();
+            const cEmail = document.getElementById('chkCustomerEmail').value.trim();
+
+            if (!cName || !cEmail) {
+                showToast('Preencha seu Nome e E-mail para continuar!', true);
+                return;
+            }
+
+            let price = activeAppForCheckout.priceLifetime;
+            if (activePlanForCheckout === 'Mensal') price = activeAppForCheckout.priceMonthly;
+            if (activePlanForCheckout === 'Código Fonte') price = activeAppForCheckout.priceSource;
+
+            const newOrder = {
+                id: `ORD-${Math.floor(1000 + Math.random() * 9000)}`,
+                customerName: cName,
+                customerEmail: cEmail,
+                appName: activeAppForCheckout.name,
+                plan: activePlanForCheckout,
+                method: activePaymentMethod.toUpperCase(),
+                amount: price,
+                date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+                status: 'Aprovado'
+            };
+
+            transactions.unshift(newOrder);
+            localStorage.setItem('apphub_transactions', JSON.stringify(transactions));
+
+            const newLicKey = `LIC-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+            licenses.unshift({
+                id: Date.now(),
+                key: newLicKey,
+                customer: cName,
+                appName: activeAppForCheckout.name,
+                plan: activePlanForCheckout,
+                date: new Date().toLocaleDateString()
+            });
+            localStorage.setItem('apphub_licenses', JSON.stringify(licenses));
+
+            closeModal('modalCheckout');
+            showToast(`Pagamento Aprovado! Licença do App: ${newLicKey}`, false);
+        }
+
+        // FIM: checkout e registro de pedidos
+        // INÍCIO: painel administrativo e catálogo de aplicativos
+        // --- PAINEL ADMINISTRATIVO E GERENCIAMENTO DE APPS ---
+        function renderAdmin() {
+            // Update KPIs
+            const totalRev = transactions.reduce((acc, t) => acc + (t.status === 'Aprovado' ? t.amount : 0), 0);
+            document.getElementById('kpiRevenue').textContent = `R$ ${totalRev.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            document.getElementById('kpiTotalApps').textContent = apps.length;
+            document.getElementById('kpiLicenses').textContent = licenses.length;
+            document.getElementById('kpiTransactions').textContent = transactions.length;
+
+            renderAdminTable();
+            renderChart();
+            updateAccountManagerDisplay();
+        }
+
+        function renderAdminTable() {
+            const tbody = document.getElementById('adminAppsTableBody');
+            const filterVal = document.getElementById('adminSearchInput').value.toLowerCase();
+
+            const filtered = apps.filter(a => a.name.toLowerCase().includes(filterVal) || a.category.toLowerCase().includes(filterVal));
+
+            tbody.innerHTML = filtered.map(app => `
+                <tr class="hover:bg-slate-800/40 transition">
+                    <td class="p-4 font-semibold text-white flex items-center gap-3">
+                        <span class="text-2xl">${app.icon || '📱'}</span>
+                        <div>
+                            <div>${app.name}</div>
+                            <div class="text-[10px] text-slate-500 font-mono">${app.id}</div>
+                        </div>
+                    </td>
+                    <td class="p-4"><span class="bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">${app.category}</span></td>
+                    <td class="p-4 font-mono text-brand-400">${app.version}</td>
+                    <td class="p-4 font-semibold text-emerald-400">R$ ${Number(app.priceMonthly).toFixed(2)}</td>
+                    <td class="p-4 font-semibold text-purple-400">R$ ${Number(app.priceLifetime).toFixed(2)}</td>
+                    <td class="p-4 text-right space-x-2">
+                        <button onclick="editApp('${app.id}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Editar App">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button onclick="deleteApp('${app.id}')" class="px-2.5 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition" title="Excluir App">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openAddAppModal() {
+            document.getElementById('modalAppFormTitle').textContent = 'Cadastrar Novo Aplicativo';
+            document.getElementById('appForm').reset();
+            document.getElementById('formAppId').value = '';
+            setImagePreview('formClientImagePreviewContainer', 'formClientImagePreview', '');
+            setImagePreview('formAdminImagePreviewContainer', 'formAdminImagePreview', '');
+            document.getElementById('modalAddApp').classList.remove('hidden');
+        }
+
+        function setImagePreview(containerId, imageId, imageSrc) {
+            const container = document.getElementById(containerId);
+            const image = document.getElementById(imageId);
+            image.src = imageSrc || '';
+            container.classList.toggle('hidden', !imageSrc);
+        }
+
+        function previewUploadedImage(input, containerId, imageId) {
+            const file = input.files[0];
+            if (!file) return;
+            if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+                input.value = '';
+                showToast('Selecione um arquivo de imagem válido.', true);
+                return;
+            }
+            if (file.size > 2 * 1024 * 1024) {
+                input.value = '';
+                showToast('Cada imagem deve ter no máximo 2 MB.', true);
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = () => setImagePreview(containerId, imageId, reader.result);
+            reader.onerror = () => showToast('Não foi possível carregar a imagem selecionada.', true);
+            reader.readAsDataURL(file);
+        }
+
+        async function uploadImage(imageData) {
+            const result = await requestSharedApps(new URL('uploads.php', API_BASE_URL), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({ image: imageData })
+            });
+            return result.url;
+        }
+
+        function readSelectedImage(inputId, existingImage) {
+            const file = document.getElementById(inputId).files[0];
+            if (!file) {
+                if ((existingImage || '').startsWith('data:image/')) {
+                    return uploadImage(existingImage);
+                }
+                return Promise.resolve(existingImage || '');
+            }
+
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = async () => {
+                    try {
+                        resolve(await uploadImage(reader.result));
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = () => reject(new Error('Não foi possível ler a imagem selecionada.'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function editApp(appId) {
+            const app = apps.find(a => a.id === appId);
+            if (!app) return;
+
+            document.getElementById('modalAppFormTitle').textContent = 'Editar Aplicativo';
+            document.getElementById('formAppId').value = app.id;
+            document.getElementById('formName').value = app.name;
+            document.getElementById('formIcon').value = app.icon;
+            document.getElementById('formCategory').value = app.category;
+            document.getElementById('formVersion').value = app.version;
+            document.getElementById('formDesc').value = app.desc;
+            document.getElementById('formPriceMonthly').value = app.priceMonthly;
+            document.getElementById('formPriceLifetime').value = app.priceLifetime;
+            document.getElementById('formPriceSource').value = app.priceSource;
+            document.getElementById('formClientImage').value = '';
+            document.getElementById('formAdminImage').value = '';
+            setImagePreview('formClientImagePreviewContainer', 'formClientImagePreview', app.clientImage || '');
+            setImagePreview('formAdminImagePreviewContainer', 'formAdminImagePreview', app.adminImage || '');
+            document.getElementById('formFeatures').value = (app.features || []).join(', ');
+
+            document.getElementById('modalAddApp').classList.remove('hidden');
+        }
+
+        async function saveAppForm(e) {
+            e.preventDefault();
+
+            const appId = document.getElementById('formAppId').value;
+            const categoryEl = document.getElementById('formCategory');
+            const versionEl = document.getElementById('formVersion');
+            const existingApp = apps.find(app => app.id === appId);
+            let clientImage;
+            let adminImage;
+
+            try {
+                [clientImage, adminImage] = await Promise.all([
+                    readSelectedImage('formClientImage', existingApp && existingApp.clientImage),
+                    readSelectedImage('formAdminImage', existingApp && existingApp.adminImage)
+                ]);
+            } catch (error) {
+                console.error('Erro ao ler imagem selecionada:', error);
+                showToast(error.message || 'Não foi possível carregar as imagens selecionadas.', true);
+                return;
+            }
+
+            const appData = {
+                id: appId || `app-${Date.now()}`,
+                name: document.getElementById('formName').value.trim(),
+                icon: document.getElementById('formIcon').value.trim() || '📱',
+                category: categoryEl ? categoryEl.value : 'Delivery',
+                version: versionEl ? (versionEl.value.trim() || 'v1.0') : 'v1.0',
+                desc: document.getElementById('formDesc').value.trim(),
+                priceMonthly: parseFloat(document.getElementById('formPriceMonthly').value) || 0,
+                priceLifetime: parseFloat(document.getElementById('formPriceLifetime').value) || 0,
+                priceSource: parseFloat(document.getElementById('formPriceSource').value) || 0,
+                clientImage,
+                adminImage,
+                features: document.getElementById('formFeatures').value.split(',').map(s => s.trim()).filter(Boolean)
+            };
+
+            const nextApps = [...apps];
+            if (appId) {
+                const idx = nextApps.findIndex(a => a.id === appId);
+                if (idx !== -1) nextApps[idx] = appData;
+            } else {
+                nextApps.unshift(appData);
+            }
+
+            try {
+                await persistSharedApps(nextApps);
+                closeModal('modalAddApp');
+                renderAdmin();
+                renderMarketplace();
+                showToast('Aplicativo salvo com sucesso!', false);
+            } catch (error) {
+                console.error('Erro ao salvar aplicativo no servidor:', error);
+                showToast(error.message || 'Não foi possível salvar o aplicativo no servidor.', true);
+            }
+        }
+
+        async function deleteApp(appId) {
+            if (confirm('Tem certeza que deseja excluir este aplicativo do catálogo?')) {
+                try {
+                    await persistSharedApps(apps.filter(a => a.id !== appId));
+                    renderAdmin();
+                    renderMarketplace();
+                    showToast('Aplicativo removido.', false);
+                } catch (error) {
+                    console.error('Erro ao remover aplicativo do servidor:', error);
+                    showToast('Não foi possível remover o aplicativo do servidor.', true);
+                }
+            }
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('salesChart').getContext('2d');
+            
+            const categoryCounts = {};
+            apps.forEach(a => {
+                categoryCounts[a.category] = (categoryCounts[a.category] || 0) + 1;
+            });
+
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(categoryCounts),
+                    datasets: [{
+                        label: 'Quantidade de Apps',
+                        data: Object.values(categoryCounts),
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+
+        function openLicenseModal() {
+            const select = document.getElementById('licAppSelect');
+            select.innerHTML = apps.map(a => `<option value="${a.name}">${a.name}</option>`).join('');
+            document.getElementById('modalLicense').classList.remove('hidden');
+        }
+
+        function generateManualLicense(e) {
+            e.preventDefault();
+            const appName = document.getElementById('licAppSelect').value;
+            const cName = document.getElementById('licCustomerName').value.trim();
+            const plan = document.getElementById('licPlanSelect').value;
+
+            const key = `LIC-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+            document.getElementById('licOutputKey').value = key;
+
+            licenses.unshift({
+                id: Date.now(),
+                key: key,
+                customer: cName,
+                appName: appName,
+                plan: plan,
+                date: new Date().toLocaleDateString()
+            });
+
+            localStorage.setItem('apphub_licenses', JSON.stringify(licenses));
+            document.getElementById('kpiLicenses').textContent = licenses.length;
+            showToast('Nova chave de licença emitida!', false);
+        }
+
+        // FIM: painel administrativo e catálogo de aplicativos
+        // INÍCIO: pagamentos, transações e configuração de acesso
+        // --- PAINEL DE PAGAMENTOS E CONTAS BANCÁRIAS ---
+        function switchPaymentTab(tabName) {
+            document.getElementById('paymentTabBank').classList.add('hidden');
+            document.getElementById('paymentTabGateways').classList.add('hidden');
+            document.getElementById('paymentTabTransactions').classList.add('hidden');
+            document.getElementById('paymentTabSecurity').classList.add('hidden');
+
+            const activeClass = 'pb-3 text-brand-400 border-b-2 border-brand-500 transition-all flex items-center gap-2 whitespace-nowrap font-bold';
+            const inactiveClass = 'pb-3 text-slate-400 hover:text-white transition-all flex items-center gap-2 whitespace-nowrap';
+
+            document.getElementById('tabBtnBank').className = inactiveClass;
+            document.getElementById('tabBtnGateways').className = inactiveClass;
+            document.getElementById('tabBtnTransactions').className = inactiveClass;
+            document.getElementById('tabBtnSecurity').className = inactiveClass;
+
+            if (tabName === 'bank') {
+                document.getElementById('paymentTabBank').classList.remove('hidden');
+                document.getElementById('tabBtnBank').className = activeClass;
+            } else if (tabName === 'gateways') {
+                document.getElementById('paymentTabGateways').classList.remove('hidden');
+                document.getElementById('tabBtnGateways').className = activeClass;
+            } else if (tabName === 'transactions') {
+                document.getElementById('paymentTabTransactions').classList.remove('hidden');
+                document.getElementById('tabBtnTransactions').className = activeClass;
+                renderTransactionsTable();
+            } else if (tabName === 'security') {
+                document.getElementById('paymentTabSecurity').classList.remove('hidden');
+                document.getElementById('tabBtnSecurity').className = activeClass;
+            }
+        }
+
+        function loadPaymentFormValues() {
+            document.getElementById('bankHolderName').value = bankSettings.holderHolder || '';
+            document.getElementById('bankDoc').value = bankSettings.doc || '';
+            document.getElementById('bankName').value = bankSettings.bankName || 'Banco Inter';
+            document.getElementById('bankAgency').value = bankSettings.agency || '';
+            document.getElementById('bankAccount').value = bankSettings.account || '';
+            document.getElementById('bankAccountType').value = bankSettings.accountType || 'Corrente';
+
+            document.getElementById('payPixKey').value = pixSettings.key || '';
+            document.getElementById('payPixName').value = pixSettings.name || '';
+            document.getElementById('payPixDiscount').value = pixSettings.discount || 5;
+        }
+
+        function saveBankAccountSettings(e) {
+            e.preventDefault();
+            bankSettings = {
+                holderHolder: document.getElementById('bankHolderName').value.trim(),
+                doc: document.getElementById('bankDoc').value.trim(),
+                bankName: document.getElementById('bankName').value,
+                agency: document.getElementById('bankAgency').value.trim(),
+                account: document.getElementById('bankAccount').value.trim(),
+                accountType: document.getElementById('bankAccountType').value
+            };
+            localStorage.setItem('apphub_bank', JSON.stringify(bankSettings));
+            showToast('Dados da conta bancária salvos com sucesso!', false);
+        }
+
+        function savePixSettings(e) {
+            e.preventDefault();
+            pixSettings = {
+                key: document.getElementById('payPixKey').value.trim(),
+                name: document.getElementById('payPixName').value.trim(),
+                discount: parseFloat(document.getElementById('payPixDiscount').value) || 0
+            };
+            localStorage.setItem('apphub_pix', JSON.stringify(pixSettings));
+            showToast('Dados do Pix salvos e atualizados no checkout!', false);
+        }
+
+        function saveGatewaySettings(e) {
+            e.preventDefault();
+            showToast('Configurações dos Gateways salvas!', false);
+        }
+
+        function renderTransactionsTable() {
+            const tbody = document.getElementById('transactionsTableBody');
+            tbody.innerHTML = transactions.map(t => `
+                <tr class="hover:bg-slate-800/40 transition">
+                    <td class="p-3 font-mono text-brand-400 font-bold">${t.id}</td>
+                    <td class="p-3">
+                        <div class="font-semibold text-white">${t.customerName}</div>
+                        <div class="text-[10px] text-slate-500">${t.customerEmail}</div>
+                    </td>
+                    <td class="p-3">${t.appName} <span class="text-[10px] text-slate-500">(${t.plan})</span></td>
+                    <td class="p-3 font-bold text-slate-300">${t.method}</td>
+                    <td class="p-3 font-extrabold text-emerald-400">R$ ${Number(t.amount).toFixed(2)}</td>
+                    <td class="p-3"><span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full text-[10px]">${t.status}</span></td>
+                    <td class="p-3 text-right">
+                        <button onclick="showToast('Comprovante reenviado!', false)" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-lg">
+                            <i class="fa-solid fa-envelope"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function changeAdminPin(e) {
+            e.preventDefault();
+            const curr = document.getElementById('pinCurrent').value.trim();
+            const pNew = document.getElementById('pinNew').value.trim();
+            const pConf = document.getElementById('pinConfirm').value.trim();
+
+            if (curr !== adminPin) {
+                showToast('PIN atual incorreto!', true);
+                return;
+            }
+            if (pNew.length < 4 || pNew !== pConf) {
+                showToast('Novos PINs não coincidem ou possuem menos de 4 dígitos!', true);
+                return;
+            }
+
+            adminPin = pNew;
+            localStorage.setItem('apphub_pin', adminPin);
+            document.getElementById('pinCurrent').value = '';
+            document.getElementById('pinNew').value = '';
+            document.getElementById('pinConfirm').value = '';
+            showToast('PIN de segurança alterado com sucesso!', false);
+        }
+
+        // FIM: pagamentos, transações e configuração de acesso
+        // INÍCIO: configuração do gestor de conta
+        // --- CONFIGURAÇÃO DO GESTOR DE CONTA VIP ---
+        function openAccountManagerModal() {
+            document.getElementById('mgrInputName').value = accountManager.name;
+            document.getElementById('mgrInputRole').value = accountManager.role;
+            document.getElementById('mgrInputWa').value = accountManager.wa;
+            document.getElementById('mgrInputEmail').value = accountManager.email || '';
+            document.getElementById('mgrInputPortal').value = accountManager.portal || '';
+
+            document.getElementById('modalAccountManager').classList.remove('hidden');
+        }
+
+        function saveAccountManagerSettings(e) {
+            e.preventDefault();
+            accountManager = {
+                name: document.getElementById('mgrInputName').value.trim(),
+                role: document.getElementById('mgrInputRole').value.trim(),
+                wa: document.getElementById('mgrInputWa').value.trim(),
+                email: document.getElementById('mgrInputEmail').value.trim(),
+                portal: document.getElementById('mgrInputPortal').value.trim()
+            };
+
+            localStorage.setItem('apphub_manager', JSON.stringify(accountManager));
+            updateAccountManagerDisplay();
+            closeModal('modalAccountManager');
+            showToast('Dados do Gestor de Conta salvos com sucesso!', false);
+        }
+
+        function updateAccountManagerDisplay() {
+            document.getElementById('mgrDisplayName').textContent = accountManager.name;
+            document.getElementById('mgrDisplaySubtitle').textContent = accountManager.role;
+            document.getElementById('mgrBtnWhatsapp').href = accountManager.wa;
+        }
+
+        // FIM: configuração do gestor de conta
+        // INÍCIO: utilitários, notificações e inicialização
+        // --- UTILITÁRIOS E MODAIS ---
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            const text = document.getElementById('toastMsg');
+
+            text.textContent = msg;
+            if (isError) {
+                icon.className = 'fa-solid fa-circle-exclamation text-red-400 text-base';
+                toast.className = 'fixed bottom-5 right-5 z-50 transform translate-y-0 opacity-100 transition-all duration-300 bg-slate-900 border border-red-500/50 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs';
+            } else {
+                icon.className = 'fa-solid fa-circle-check text-emerald-400 text-base';
+                toast.className = 'fixed bottom-5 right-5 z-50 transform translate-y-0 opacity-100 transition-all duration-300 bg-slate-900 border border-emerald-500/50 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs';
+            }
+
+            setTimeout(() => {
+                toast.className = 'fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 border border-brand-500/50 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 text-xs pointer-events-none';
+            }, 3500);
+        }
+
+        window.onload = async function() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register(new URL('sw.js', API_BASE_URL), { scope: API_BASE_URL.pathname })
+                    .catch(error => console.error('Não foi possível registrar o service worker:', error));
+            }
+            updateAdminUIVisibility();
+            updateAccountManagerDisplay();
+            await loadSharedApps();
+            renderMarketplace();
+            const appIdToOpen = installAppIdFromUrl || new URLSearchParams(window.location.search).get('app');
+            if (appIdToOpen && apps.some(app => app.id === appIdToOpen)) {
+                openAppDetailModal(appIdToOpen);
+            }
+        };
+        // FIM: utilitários, notificações e inicialização
+    </script>
+    <!-- FIM: lógica JavaScript da aplicação -->
+</body>
+</html>
